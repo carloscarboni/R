@@ -109,7 +109,7 @@ provinces$co2_pc <- provinces$sum_co2 / provinces$population
 
 # Calculate breaks dynamically for better distribution (Province Total Emissions)
 breaks_total_co2_prov <- classInt::classIntervals(
-  provinces$sum_co2 / 1e6, # Convert to thousands
+  provinces$sum_co2 / 1e6, # Convert to millions
   n = 7,
   style = "equal"
 )$brks
@@ -127,8 +127,8 @@ map_total_co2_prov <- ggplot() +
   scale_fill_gradientn(
     name = "Total (millions of tonnes)",
     colors = pal,
-    breaks = round(breaks_total_co2_prov, 0),
-    labels = round(breaks_total_co2_prov, 0),
+    breaks = round(breaks_total_co2_prov, 2),
+    labels = round(breaks_total_co2_prov, 2),
     na.value = "white"
   ) + 
   guides(
@@ -277,6 +277,98 @@ map_co2_pc_caba_ba <- ggplot() +
 ggsave(
   "caba_ba_co2_pc_improved.png",
   map_co2_pc_caba_ba,
+  width = 6,
+  height = 8,
+  units = "in",
+  bg = "white"
+)
+
+# Filter for Greater Buenos Aires (Conurbano Bonaerense) and CABA
+conurbano <- country |> 
+  filter(NAME_1 == "Buenos Aires" & NAME_2 %in% c(
+    "Almirante Brown", "Avellaneda", "Berazategui", "Berisso", "Brandsen", "Campana", "Cañuelas", "Ensenada", "Escobar", "Esteban Echeverría", "Exaltación de la Cruz", "Ezeiza", "Florencio Varela", "General Las Heras", "General Rodríguez", "General San Martín", "Hurlingham", "Ituzaingó", "José C. Paz", "La Matanza", "La Plata", "Lanús", "Lomas de Zamora", "Luján", "Malvinas Argentinas", "Marcos Paz", "Merlo", "Moreno", "Morón", "Quilmes", "Pilar", "Presidente Perón", "San Fernando (1)", "San Isidro", "San Fernando (2)", "San Vicente", "Tigre", "Tres de Febrero", "Vicente López", "Zárate","General Sarmiento"
+  ) | NAME_1 == "Ciudad de Buenos Aires")
+
+# Calculate breaks dynamically for better distribution (Conurbano Total Emissions)
+breaks_total_co2_conurbano <- classInt::classIntervals(
+  conurbano$sum_co2 / 1000, # Convert to thousands
+  n = 7,
+  style = "equal"
+)$brks
+
+# Total CO2 emissions map for municipalities in Conurbano and CABA
+map_total_co2_conurbano <- ggplot() +
+  geom_sf(
+    data = conurbano,
+    aes(
+      fill = sum_co2 / 1000 # Convert to thousands
+    ),
+    color = "white",
+    size = .15
+  ) +
+  scale_fill_gradientn(
+    name = "Total (thousands of tonnes)",
+    colors = pal,
+    breaks = round(breaks_total_co2_conurbano, 0),
+    labels = round(breaks_total_co2_conurbano, 0),
+    na.value = "white"
+  ) + 
+  guides(
+    fill = guide_colorbar(
+      direction = "horizontal",
+      barwidth = 12,
+      barheight = .5
+    )
+  ) +
+  coord_sf(crs = 22185) +
+  theme_for_the_win()
+
+ggsave(
+  "conurbano_total_co2.png",
+  map_total_co2_conurbano,
+  width = 6,
+  height = 8,
+  units = "in",
+  bg = "white"
+)
+
+# Calculate breaks dynamically for better distribution (Conurbano Per Capita Emissions)
+breaks_co2_pc_conurbano <- classInt::classIntervals(
+  conurbano$co2_pc,
+  n = 7,
+  style = "equal"
+)$brks
+
+# CO2 emissions per capita map for municipalities in Conurbano and CABA
+map_co2_pc_conurbano <- ggplot() +
+  geom_sf(
+    data = conurbano,
+    aes(
+      fill = co2_pc
+    ),
+    color = "white",
+    size = .15
+  ) +
+  scale_fill_gradientn(
+    name = "Tonnes per capita",
+    colors = pal,
+    breaks = round(breaks_co2_pc_conurbano, 2),
+    labels = round(breaks_co2_pc_conurbano, 2),
+    na.value = "white"
+  ) + 
+  guides(
+    fill = guide_colorbar(
+      direction = "horizontal",
+      barwidth = 12,
+      barheight = .5
+    )
+  ) +
+  coord_sf(crs = 22185) +
+  theme_for_the_win()
+
+ggsave(
+  "conurbano_co2_pc.png",
+  map_co2_pc_conurbano,
   width = 6,
   height = 8,
   units = "in",
