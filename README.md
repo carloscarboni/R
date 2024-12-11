@@ -1,4 +1,4 @@
-#Distribution of Total and Per Capita Emissions in Argentina and the AMBA
+# Distribution of Total and Per Capita Emissions in Argentina and the AMBA
 
 This project analyzes the distribution of total and per capita emissions across Argentina, with a progressive focus starting at the national level, moving into a detailed analysis of Buenos Aires Province and City, and concluding with a specific study of the AMBA region (Greater Buenos Aires and Buenos Aires City).
 
