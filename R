@@ -52,7 +52,7 @@ country <- geodata::gadm(
   level = 2,
   path = getwd()
 ) |>
-sf::st_as_sf()
+  sf::st_as_sf()
 
 country$population <- exactextractr::exact_extract(
   pop,
@@ -85,72 +85,198 @@ country$sum_co2 <- exactextractr::exact_extract(
 
 country$co2_pc <- country$sum_co2 / country$population
 
-# Theme, Colors & Breaks
+# Aggregating data to provincial level
+provinces <- geodata::gadm(
+  country = "ARG",
+  level = 1,
+  path = getwd()
+) |>
+  sf::st_as_sf()
 
-theme_for_the_win  <- function (){
-  theme_void()+
-    theme(
-      legend.position = "top",
-      legend.title = element_text(
-        size = 9, color = "grey20"
-      ),
-      legend.text = element_text(
-        size = 9, color = "grey20"
-      ),
-      plot.margin = unit(
-        c(
-          t= 1, r= 0,
-          B= 0, l= 0
-        ),"lines"
-      )
-    )
-}
-
-cols <- hcl.colors(
-  5,"Inferno",
-  rev= T
+provinces$sum_co2 <- exactextractr::exact_extract(
+  co2,
+  provinces,
+  "sum"
 )
 
-pal <- colorRampPalette(
-  cols)(64)
-  
-breaks <- classInt::classIntervals(
-  country$co2_pc,
-  n=6,
+provinces$population <- exactextractr::exact_extract(
+  pop,
+  provinces,
+  "sum"
+)
+
+provinces$co2_pc <- provinces$sum_co2 / provinces$population
+
+# Calculate breaks dynamically for better distribution (Province Total Emissions)
+breaks_total_co2_prov <- classInt::classIntervals(
+  provinces$sum_co2 / 1e6, # Convert to thousands
+  n = 7,
   style = "equal"
 )$brks
 
-# CO2 per capita map
-
-map <- ggplot()+
+# Total CO2 emissions map by province
+map_total_co2_prov <- ggplot() +
   geom_sf(
-    data = country,
+    data = provinces,
     aes(
-      fill = co2_pc
+      fill = sum_co2 / 1e6 # Convert to millions
     ),
     color = "white",
-    size=.15
-    
-  )+
+    size = .15
+  ) +
   scale_fill_gradientn(
-    name="tonnes per capita",
-    colors= pal,
-    breaks = round (breaks,0),
-    labels = round (breaks,0),
+    name = "Total (millions of tonnes)",
+    colors = pal,
+    breaks = round(breaks_total_co2_prov, 0),
+    labels = round(breaks_total_co2_prov, 0),
     na.value = "white"
-    
-  )+ guides (
+  ) + 
+  guides(
     fill = guide_colorbar(
       direction = "horizontal",
       barwidth = 12,
       barheight = .5
     )
-  ) + coord_sf(crs = 22185) +
+  ) +
+  coord_sf(crs = 22185) +
   theme_for_the_win()
 
 ggsave(
-  "arg_lvl2_co2.png",
-  map,
+  "arg_prov_total_co2.png",
+  map_total_co2_prov,
+  width = 6,
+  height = 8,
+  units = "in",
+  bg = "white"
+)
+
+# Calculate breaks dynamically for better distribution (Province Per Capita Emissions)
+breaks_co2_pc_prov <- classInt::classIntervals(
+  provinces$co2_pc,
+  n = 7,
+  style = "equal"
+)$brks
+
+# CO2 emissions per capita map by province
+map_co2_pc_prov <- ggplot() +
+  geom_sf(
+    data = provinces,
+    aes(
+      fill = co2_pc
+    ),
+    color = "white",
+    size = .15
+  ) +
+  scale_fill_gradientn(
+    name = "Tonnes per capita",
+    colors = pal,
+    breaks = round(breaks_co2_pc_prov, 2),
+    labels = round(breaks_co2_pc_prov, 2),
+    na.value = "white"
+  ) + 
+  guides(
+    fill = guide_colorbar(
+      direction = "horizontal",
+      barwidth = 12,
+      barheight = .5
+    )
+  ) +
+  coord_sf(crs = 22185) +
+  theme_for_the_win()
+
+ggsave(
+  "arg_prov_co2_pc.png",
+  map_co2_pc_prov,
+  width = 6,
+  height = 8,
+  units = "in",
+  bg = "white"
+)
+
+# Filter for City of Buenos Aires and Buenos Aires province
+caba_ba <- country |> 
+  filter(NAME_1 %in% c("Ciudad de Buenos Aires", "Buenos Aires"))
+
+# Calculate breaks dynamically for better distribution (Municipal Total Emissions)
+breaks_total_co2_caba_ba <- classInt::classIntervals(
+  caba_ba$sum_co2 / 1000, # Convert to thousands
+  n = 7,
+  style = "equal"
+)$brks
+
+# Total CO2 emissions map for municipalities in Buenos Aires and CABA
+map_total_co2_caba_ba <- ggplot() +
+  geom_sf(
+    data = caba_ba,
+    aes(
+      fill = sum_co2 / 1000 # Convert to thousands
+    ),
+    color = "white",
+    size = .15
+  ) +
+  scale_fill_gradientn(
+    name = "Total (thousands of tonnes)",
+    colors = pal,
+    breaks = round(breaks_total_co2_caba_ba, 0),
+    labels = round(breaks_total_co2_caba_ba, 0),
+    na.value = "white"
+  ) + 
+  guides(
+    fill = guide_colorbar(
+      direction = "horizontal",
+      barwidth = 12,
+      barheight = .5
+    )
+  ) +
+  coord_sf(crs = 22185) +
+  theme_for_the_win()
+
+ggsave(
+  "caba_ba_total_co2.png",
+  map_total_co2_caba_ba,
+  width = 6,
+  height = 8,
+  units = "in",
+  bg = "white"
+)
+
+# Calculate breaks dynamically for better distribution (Municipal Per Capita Emissions)
+breaks_co2_pc_caba_ba <- classInt::classIntervals(
+  caba_ba$co2_pc,
+  n = 7,
+  style = "equal"
+)$brks
+
+# CO2 emissions per capita map for municipalities in Buenos Aires and CABA
+map_co2_pc_caba_ba <- ggplot() +
+  geom_sf(
+    data = caba_ba,
+    aes(
+      fill = co2_pc
+    ),
+    color = "white",
+    size = .15
+  ) +
+  scale_fill_gradientn(
+    name = "Tonnes per capita",
+    colors = pal,
+    breaks = round(breaks_co2_pc_caba_ba, 2),
+    labels = round(breaks_co2_pc_caba_ba, 2),
+    na.value = "white"
+  ) + 
+  guides(
+    fill = guide_colorbar(
+      direction = "horizontal",
+      barwidth = 12,
+      barheight = .5
+    )
+  ) +
+  coord_sf(crs = 22185) +
+  theme_for_the_win()
+
+ggsave(
+  "caba_ba_co2_pc_improved.png",
+  map_co2_pc_caba_ba,
   width = 6,
   height = 8,
   units = "in",
